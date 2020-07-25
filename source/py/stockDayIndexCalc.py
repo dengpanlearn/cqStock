@@ -54,6 +54,7 @@ class StockDayIndexCalc:
 
             df = DataFrame(itemList, columns=columns)
             self.df = df[['open','high', 'close', 'low', 'volume']]
+    
             return 0
             
         except:
@@ -83,10 +84,21 @@ class StockDayIndexCalc:
 
     def calcStockMa(self, windowSize):
         ma = self.df['close'].rolling(window=windowSize, min_periods=1).mean()
-        print(self.df)
-        print('...........\n')
-        print(ma)
-     
+        return ma
+
+    def calcStockCCI(self, windowN, windowM):
+        cciType = (self.df['close']+self.df['high']+self.df['low'])/3
+        cciTypeMa = cciType.rolling(window=windowN, min_periods=1).mean()
+        cciTypeDev = (cciType-cciTypeMa)
+        cciTypeAvedev = cciTypeDev.abs().rolling(window=windowN, min_periods=1).mean()
+        print(cciType)
+        print('--------')
+        print(cciTypeAvedev)
+        cci = cciTypeDev/(0.015*cciTypeAvedev)
+        print('--------')
+        print(cci)
+
+
         
 if __name__ == '__main__':
     stockDayCacl =   StockDayIndexCalc()
@@ -98,9 +110,9 @@ if __name__ == '__main__':
        
         ret = weekKLine.getCurWeekKLine('SZ300001')
         """
-        ret = stockDayCacl.getStockRealQuotes('SH603488', 40)
+        ret = stockDayCacl.getStockRealQuotes('SH603488', 50)
         if not ret:
-            stockDayCacl.calcStockMa(5)
+            stockDayCacl.calcStockCCI(14,5)
      
 
 
