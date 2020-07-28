@@ -86,20 +86,72 @@ class StockDayIndexCalc:
         ma = self.df['close'].rolling(window=windowSize, min_periods=1).mean()
         return ma
 
+    def calcCCIFunc(cciType):
+        typeMean= cciType.mean()
+        cciTypeAve = cciType-typeMean
+        avedev = cciTypeAve.abs().mean()
+        cci = cciTypeAve.iloc[cciTypeAve.size-1]/(0.015*avedev)
+      
+        return cci
+        
+
     def calcStockCCI(self, windowN, windowM):
         cciType = (self.df['close']+self.df['high']+self.df['low'])/3
-        cciTypeMa = cciType.rolling(window=windowN, min_periods=1).mean()
-        cciTypeDev = (cciType-cciTypeMa)
-        cciTypeAvedev = cciTypeDev.abs().rolling(window=windowN, min_periods=1).mean()
-        print(cciType)
-        print('--------')
-        print(cciTypeAvedev)
-        cci = cciTypeDev/(0.015*cciTypeAvedev)
-        print('--------')
-        print(cci)
+        cci = cciType.rolling(window=windowN, min_periods=1).apply(func=StockDayIndexCalc.calcCCIFunc)
+        return cci
+      
+    
+    def calcStockBOLL(self, windowN):
+        boll = self.df['close'].rolling(window=windowN, min_periods=1).mean()
+        stdClose = self.df['close'].rolling(window=windowN, min_periods=1).std()
+        uBoll = boll+2*stdClose
+        lBoll = boll-2*stdClose
+    
 
-
+    def calcDbqrGGFunc(close):
+        refClose = close.iloc[0]
+        gg = (close.iloc[close.size-1]-refClose)/refClose
+        return gg
         
+    def calcStockDQBR(self, windowN, windowM):
+        dbqrGG = self.df['close'].rolling(window=(windowN+1), min_periods=1).apply(func=StockDayIndexCalc.calcDbqrGGFunc)
+        dgqrMa = dbqrGG.rolling(window=windowM, min_periods=1).mean()
+        return dgqrMa
+
+    def calcStockWR(self, windowN):
+        hhv = self.df['high'].rolling(window=windowN, min_periods=1).max()
+        llv = self.df['low'].rolling(window=windowN, min_periods=1).min()
+        wr = 100*(hhv-self.df['close'])/(hhv-llv)
+        return wr
+
+    def calcMtmFunc(close):
+        mtm = close.iloc[close.size-1]-close.iloc[0]
+        return mtm
+
+    def calcStockMTM(self, windowN, windowM):
+        mtm =  self.df['close'].rolling(window=(windowN+1), min_periods=1).apply(func=StockDayIndexCalc.calcMtmFunc)
+        mtmMa = mtm.rolling(window=windowM, min_periods=1).mean()
+        return mtmMa
+
+    def calcStokKDJ(self, windowN, windowM1, windowM2):
+        hhv = self.df['high'].rolling(window=windowN, min_periods=1).max()
+        llv = self.df['low'].rolling(window=windowN, min_periods=1).min()
+        rsv = 100*(self.df['close']-llv)/(hhv-llv)
+        k = rsv.ewm(alpha=1/windowM1, min_periods=1, adjust=False).mean()
+
+        d = k.ewm(alpha=1/windowM2, min_periods=1, adjust=False).mean()
+        j = 3*k-2*d
+        return k
+           
+
+    def calcStockMACD(self, windowShort, windowLong, windowMid):
+        emaShort = self.df['close'].ewm(alpha=2/(windowShort+1), min_periods=1, adjust=False).mean()
+        emaLong = self.df['close'].ewm(alpha=2/(windowLong+1), min_periods=1, adjust=False).mean()
+        dif = emaShort-emaLong
+        dea = dif.ewm(alpha=2/(windowMid+1), min_periods=1, adjust=False).mean()
+        macd = (dif-dea)*2
+        return macd
+    
 if __name__ == '__main__':
     stockDayCacl =   StockDayIndexCalc()
     if (not stockDayCacl.prepareCalc(3, 3)):
@@ -110,9 +162,9 @@ if __name__ == '__main__':
        
         ret = weekKLine.getCurWeekKLine('SZ300001')
         """
-        ret = stockDayCacl.getStockRealQuotes('SH603488', 50)
+        ret = stockDayCacl.getStockRealQuotes('SH603488', 100)
         if not ret:
-            stockDayCacl.calcStockCCI(14,5)
+            stockDayCacl.calcStockMACD(12,26, 9)
      
 
 
